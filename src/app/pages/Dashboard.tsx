@@ -1,12 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Logo } from "../components/Logo";
-import { KPICard } from "../components/KPICard";
 import { RiskBadge } from "../components/RiskBadge";
-import { Search, Bell, LayoutDashboard, Activity, FileText, User, LogOut, Users, Target, TrendingUp, Eye } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  Search,
+  Bell,
+  LayoutDashboard,
+  Activity,
+  FileText,
+  LogOut,
+  Users,
+  Target,
+  TrendingUp,
+  Eye,
+  Info
+} from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 
-const activityData = [
+const simulatedActivityData = [
   { day: "Mon", predictions: 45 },
   { day: "Tue", predictions: 52 },
   { day: "Wed", predictions: 48 },
@@ -16,18 +37,18 @@ const activityData = [
   { day: "Sun", predictions: 42 },
 ];
 
-const confidenceData = [
+const simulatedConfidenceData = [
   { range: "90-100%", count: 842 },
   { range: "80-89%", count: 324 },
   { range: "70-79%", count: 156 },
   { range: "60-69%", count: 78 },
 ];
 
-const recentPredictions = [
-  { patient: "P-2847", type: "Heart Disease", risk: "high", confidence: 96.4, time: "2 min ago" },
-  { patient: "P-2846", type: "Diabetes", risk: "low", confidence: 92.1, time: "8 min ago" },
-  { patient: "P-2845", type: "Breast Cancer", risk: "medium", confidence: 88.7, time: "15 min ago" },
-  { patient: "P-2844", type: "Heart Disease", risk: "low", confidence: 94.2, time: "23 min ago" },
+const simulatedRecentPredictions = [
+  { patient: "DEMO-2847", type: "Breast Cancer (IDC)", risk: "high", confidence: 94.2, time: "2 min ago" },
+  { patient: "DEMO-2846", type: "Diabetes (Clinical)", risk: "low", confidence: 88.5, time: "8 min ago" },
+  { patient: "DEMO-2845", type: "Breast Cancer (IDC)", risk: "low", confidence: 91.3, time: "15 min ago" },
+  { patient: "DEMO-2844", type: "Diabetes (Clinical)", risk: "high", confidence: 86.4, time: "23 min ago" },
 ];
 
 export function Dashboard() {
@@ -95,7 +116,15 @@ export function Dashboard() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="bg-white border-b border-[#E2D5C8] px-8 py-4">
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-[#F0E8DE] text-[#6B4F3A] rounded text-xs font-semibold">
+                Clinician Portal
+              </span>
+              <span className="text-xs text-[#6B4F3A]">
+                AI Diagnostics &amp; Risk Stratification Overview
+              </span>
+            </div>
             <div className="flex items-center gap-4">
               <button className="relative p-2 text-[#6B4F3A] hover:text-[#2C1A0E] hover:bg-[#F0E8DE] rounded-lg transition-colors">
                 <Bell className="w-5 h-5" />
@@ -117,23 +146,42 @@ export function Dashboard() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Prototype Demo Banner */}
+            <div className="bg-[#FFF4ED] border border-[#E07B54]/40 rounded-xl p-4 flex items-start gap-3">
+              <Info className="w-5 h-5 text-[#E07B54] flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-[#6B4F3A] leading-relaxed">
+                <span className="font-semibold text-[#2C1A0E]">Demonstration &amp; Prototype Notice: </span>
+                Aggregated activity trends, volume metrics, and recent activity logs displayed below are simulated cohort data for UI evaluation. Real predictions are triggered via the{" "}
+                <button
+                  onClick={() => navigate("/predict")}
+                  className="font-medium text-[#C0392B] hover:underline"
+                >
+                  Predict Disease
+                </button>{" "}
+                tab.
+              </div>
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-bold text-[#2C1A0E]">Dashboard Overview</h2>
+                <p className="text-xs text-[#6B4F3A] mt-1">
+                  Monitoring simulated clinical inference throughput and diagnostic distribution.
+                </p>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-[#5B8C5A]/10 border border-[#5B8C5A]/30 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-[#5B8C5A]"></div>
-                <span className="text-sm font-medium text-[#5B8C5A]">System Optimal</span>
+                <span className="text-xs font-medium text-[#5B8C5A]">Backend Online (Flask API)</span>
               </div>
             </div>
 
-            {/* KPI Cards - Linen background */}
+            {/* KPI Cards */}
             <div className="grid grid-cols-4 gap-6">
               <div className="bg-[#F0E8DE] rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
                 <div className="flex items-start justify-between mb-3">
-                  <p className="text-[#6B4F3A] text-sm">Total Patients Scanned</p>
+                  <p className="text-[#6B4F3A] text-xs uppercase tracking-wide">Simulated Scans (Demo)</p>
                   <div className="text-[#E8845A]"><Users className="w-5 h-5" /></div>
                 </div>
                 <p className="text-3xl font-bold text-[#2C1A0E]">1,248</p>
@@ -141,7 +189,7 @@ export function Dashboard() {
 
               <div className="bg-[#F0E8DE] rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
                 <div className="flex items-start justify-between mb-3">
-                  <p className="text-[#6B4F3A] text-sm">High Risk Predictions</p>
+                  <p className="text-[#6B4F3A] text-xs uppercase tracking-wide">High Risk Flags (Demo)</p>
                   <div className="text-[#E8845A]"><Target className="w-5 h-5" /></div>
                 </div>
                 <p className="text-3xl font-bold text-[#2C1A0E]">84</p>
@@ -149,7 +197,7 @@ export function Dashboard() {
 
               <div className="bg-[#F0E8DE] rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
                 <div className="flex items-start justify-between mb-3">
-                  <p className="text-[#6B4F3A] text-sm">Avg. AI Confidence</p>
+                  <p className="text-[#6B4F3A] text-xs uppercase tracking-wide">Simulated Avg. Confidence</p>
                   <div className="text-[#E8845A]"><TrendingUp className="w-5 h-5" /></div>
                 </div>
                 <p className="text-3xl font-bold text-[#2C1A0E]">94.2%</p>
@@ -157,7 +205,7 @@ export function Dashboard() {
 
               <div className="bg-[#F0E8DE] rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
                 <div className="flex items-start justify-between mb-3">
-                  <p className="text-[#6B4F3A] text-sm">Active Monitoring</p>
+                  <p className="text-[#6B4F3A] text-xs uppercase tracking-wide">Simulated Monitoring</p>
                   <div className="text-[#E8845A]"><Eye className="w-5 h-5" /></div>
                 </div>
                 <p className="text-3xl font-bold text-[#2C1A0E]">342</p>
@@ -167,9 +215,10 @@ export function Dashboard() {
             {/* Charts Row */}
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
-                <h3 className="font-semibold text-[#2C1A0E] mb-4">Prediction Activity Trends</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={activityData}>
+                <h3 className="font-semibold text-[#2C1A0E] mb-1">Simulated Inference Activity Trends</h3>
+                <p className="text-xs text-[#6B4F3A] mb-4">Daily scan throughput volume (sample prototype metrics)</p>
+                <ResponsiveContainer width="100%" height={230}>
+                  <AreaChart data={simulatedActivityData}>
                     <defs>
                       <linearGradient id="colorPredictions" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#E8845A" stopOpacity={0.3} />
@@ -193,9 +242,10 @@ export function Dashboard() {
               </div>
 
               <div className="bg-white rounded-xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
-                <h3 className="font-semibold text-[#2C1A0E] mb-4">AI Confidence Distribution</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={confidenceData}>
+                <h3 className="font-semibold text-[#2C1A0E] mb-1">AI Confidence Distribution</h3>
+                <p className="text-xs text-[#6B4F3A] mb-4">Classification score distribution across simulated cohorts</p>
+                <ResponsiveContainer width="100%" height={230}>
+                  <BarChart data={simulatedConfidenceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E2D5C8" />
                     <XAxis dataKey="range" stroke="#6B4F3A" fontSize={12} />
                     <YAxis stroke="#6B4F3A" fontSize={12} />
@@ -208,33 +258,39 @@ export function Dashboard() {
 
             {/* Recent Predictions Table */}
             <div className="bg-white rounded-xl border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-[#E2D5C8]">
-                <h3 className="font-semibold text-[#2C1A0E]">Recent Predictions</h3>
+              <div className="px-6 py-4 border-b border-[#E2D5C8] flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-[#2C1A0E]">Simulated Activity Log</h3>
+                  <p className="text-xs text-[#6B4F3A]">Sample records illustrating clinical tracking interfaces</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigate("/predict")}>
+                  Run Real Prediction →
+                </Button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-[#FDF6F0]">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-[#6B4F3A] uppercase tracking-wider">
-                        Patient
+                        Record ID
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-[#6B4F3A] uppercase tracking-wider">
-                        Type
+                        Modality / Disease
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-[#6B4F3A] uppercase tracking-wider">
-                        Risk Level
+                        Risk Tier
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-[#6B4F3A] uppercase tracking-wider">
                         AI Confidence
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-[#6B4F3A] uppercase tracking-wider">
-                        Time
+                        Timestamp
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-[#E2D5C8]">
-                    {recentPredictions.map((pred, idx) => (
-                      <tr key={idx} className="hover:bg-[#FDF6F0] transition-colors cursor-pointer">
+                    {simulatedRecentPredictions.map((pred, idx) => (
+                      <tr key={idx} className="hover:bg-[#FDF6F0] transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-medium text-[#2C1A0E]">{pred.patient}</span>
                         </td>

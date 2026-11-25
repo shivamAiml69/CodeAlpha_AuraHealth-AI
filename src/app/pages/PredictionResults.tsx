@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Logo } from "../components/Logo";
 import { Button } from "../components/Button";
 import {
@@ -9,96 +9,60 @@ import {
   Activity,
   FileText,
   LogOut,
-  Share2,
-  Download,
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
-  Heart,
-  TrendingUp,
   Sparkles,
   Brain,
-  ShieldAlert,
   Stethoscope,
   CalendarClock,
+  Microscope,
+  Info,
+  RotateCcw
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   RadialBarChart,
   RadialBar,
   PolarAngleAxis,
+  ResponsiveContainer
 } from "recharts";
-
-const bloodPressureData = [
-  { month: "Jan", value: 118 },
-  { month: "Feb", value: 125 },
-  { month: "Mar", value: 132 },
-  { month: "Apr", value: 140 },
-  { month: "May", value: 152 },
-  { month: "Jun", value: 160 },
-];
-
-const riskyIndicators = [
-  { name: "Blood Pressure", value: "160/95", subtitle: "Elevated significantly", icon: AlertTriangle, level: 88 },
-  { name: "Cholesterol", value: "240 mg/dL", subtitle: "High LDL levels detected", icon: ShieldAlert, level: 75 },
-  { name: "Age Factor", value: "62 yrs", subtitle: "Higher bracket risk", icon: CalendarClock, level: 60 },
-];
-
-const healthyIndicators = [
-  { name: "Glucose", value: "95 mg/dL", subtitle: "Within normal range", icon: CheckCircle2, level: 92 },
-  { name: "BMI", value: "24.5", subtitle: "Healthy weight range", icon: CheckCircle2, level: 88 },
-  { name: "Heart Rate", value: "72 bpm", subtitle: "Stable resting rate", icon: Heart, level: 95 },
-];
-
-const recommendations = [
-  {
-    title: "Immediate Action",
-    description: "Schedule an urgent cardiology consultation to review elevated blood pressure and prescribe necessary antihypertensive medication.",
-    bgColor: "bg-[#FFF4ED]",
-    borderColor: "border-[#E07B54]",
-    accent: "#C0392B",
-    icon: Stethoscope,
-  },
-  {
-    title: "Lifestyle Modification",
-    description: "Implement a low-sodium diet and initiate a guided, moderate cardiovascular exercise program (150 min/week).",
-    bgColor: "bg-[#EFF6FF]",
-    borderColor: "border-[#4A7B8C]",
-    accent: "#4A7B8C",
-    icon: TrendingUp,
-  },
-  {
-    title: "Follow-up Monitoring",
-    description: "Assign a continuous blood pressure monitor for 48 hours and re-evaluate lipid panel in 4 weeks.",
-    bgColor: "bg-[#F0FDF4]",
-    borderColor: "border-[#5B8C5A]",
-    accent: "#5B8C5A",
-    icon: CalendarClock,
-  },
-];
-
-const radialData = [{ name: "risk", value: 80, fill: "#C0392B" }];
+import {
+  getLatestPrediction,
+  clearLatestPrediction,
+  getModelStatus,
+  SavedPrediction,
+  ModelStatusResponse
+} from "../lib/api";
 
 export function PredictionResults() {
   const navigate = useNavigate();
-  const [activeNav, setActiveNav] = React.useState("results");
-  const [probability, setProbability] = React.useState(0);
-  const [confidence, setConfidence] = React.useState(0);
+  const [activeNav, setActiveNav] = useState("results");
+  const [prediction, setPrediction] = useState<SavedPrediction | null>(null);
+  const [modelStatus, setModelStatus] = useState<ModelStatusResponse | null>(null);
+  const [animProbability, setAnimProbability] = useState(0);
 
-  React.useEffect(() => {
-    const t1 = setTimeout(() => setProbability(80), 200);
-    const t2 = setTimeout(() => setConfidence(96.4), 600);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+  useEffect(() => {
+    const latest = getLatestPrediction();
+    setPrediction(latest);
+
+    if (latest) {
+      const timer = setTimeout(() => {
+        setAnimProbability(latest.confidence);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
   }, []);
+
+  useEffect(() => {
+    getModelStatus().then((status) => {
+      if (status) setModelStatus(status);
+    });
+  }, []);
+
+  const handleClear = () => {
+    clearLatestPrediction();
+    setPrediction(null);
+  };
 
   const NavItem = ({ icon: Icon, label, id }: { icon: any; label: string; id: string }) => (
     <button
@@ -124,6 +88,127 @@ export function PredictionResults() {
     </button>
   );
 
+  // Build recommendations based on actual prediction
+  const getRecommendations = () => {
+    if (!prediction) return [];
+
+    if (prediction.disease === "breast-cancer") {
+      if (prediction.isPositive) {
+        return [
+          {
+            title: "Urgent Pathologist Review",
+            description: "Schedule microscopic examination of serial whole-slide tissue sections by a senior pathologist to confirm invasive carcinoma margins.",
+            bgColor: "bg-[#FFF4ED]",
+            borderColor: "border-[#E07B54]",
+            accent: "#C0392B",
+            icon: Microscope,
+          },
+          {
+            title: "Immunohistochemistry (IHC) Panel",
+            description: "Order ER (estrogen receptor), PR (progesterone receptor), HER2/neu, and Ki-67 proliferation biomarker testing for molecular subtyping.",
+            bgColor: "bg-[#EFF6FF]",
+            borderColor: "border-[#4A7B8C]",
+            accent: "#4A7B8C",
+            icon: Stethoscope,
+          },
+          {
+            title: "Multidisciplinary Tumor Board",
+            description: "Present histological findings to multidisciplinary surgical, medical, and radiation oncology teams for personalized therapeutic planning.",
+            bgColor: "bg-[#FDF6F0]",
+            borderColor: "border-[#D4A96A]",
+            accent: "#D4A96A",
+            icon: CalendarClock,
+          },
+        ];
+      } else {
+        return [
+          {
+            title: "Routine Clinical Follow-Up",
+            description: "Maintain standard clinical surveillance and scheduled routine mammography screening as per national oncology guidelines.",
+            bgColor: "bg-[#F0FDF4]",
+            borderColor: "border-[#5B8C5A]",
+            accent: "#5B8C5A",
+            icon: CheckCircle2,
+          },
+          {
+            title: "Imaging Correlation",
+            description: "Cross-reference the negative biopsy patch with diagnostic ultrasound and bilateral digital mammograms to confirm representative sampling.",
+            bgColor: "bg-[#EFF6FF]",
+            borderColor: "border-[#4A7B8C]",
+            accent: "#4A7B8C",
+            icon: Stethoscope,
+          },
+          {
+            title: "Electronic Health Record Archival",
+            description: "Document IDC negative microscopic patch findings and image provenance in the hospital pathology laboratory information system (LIS).",
+            bgColor: "bg-[#FDF6F0]",
+            borderColor: "border-[#E2D5C8]",
+            accent: "#6B4F3A",
+            icon: CalendarClock,
+          },
+        ];
+      }
+    } else {
+      // Diabetes recommendations
+      if (prediction.isPositive) {
+        return [
+          {
+            title: "Confirmatory Glycemic Testing",
+            description: "Order fasting plasma glucose (FPG) and standardized glycated hemoglobin (HbA1c) laboratory panel to confirm glycemic status.",
+            bgColor: "bg-[#FFF4ED]",
+            borderColor: "border-[#E07B54]",
+            accent: "#C0392B",
+            icon: Stethoscope,
+          },
+          {
+            title: "Nutritional & Lifestyle Intervention",
+            description: "Initiate structured medical nutrition therapy (low glycemic index diet) and recommended moderate physical activity (150 min/week).",
+            bgColor: "bg-[#EFF6FF]",
+            borderColor: "border-[#4A7B8C]",
+            accent: "#4A7B8C",
+            icon: CalendarClock,
+          },
+          {
+            title: "Endocrinology Consultation",
+            description: "Schedule clinical evaluation to discuss glycemic control, cardiovascular risk reduction, and baseline renal/retinal screening.",
+            bgColor: "bg-[#FDF6F0]",
+            borderColor: "border-[#D4A96A]",
+            accent: "#D4A96A",
+            icon: Stethoscope,
+          },
+        ];
+      } else {
+        return [
+          {
+            title: "Metabolic Health Maintenance",
+            description: "Continue balanced nutritional habits, optimal weight maintenance, and regular cardiovascular exercise.",
+            bgColor: "bg-[#F0FDF4]",
+            borderColor: "border-[#5B8C5A]",
+            accent: "#5B8C5A",
+            icon: CheckCircle2,
+          },
+          {
+            title: "Annual Preventative Screening",
+            description: "Schedule annual fasting blood glucose or HbA1c check-up to monitor ongoing metabolic trajectory.",
+            bgColor: "bg-[#EFF6FF]",
+            borderColor: "border-[#4A7B8C]",
+            accent: "#4A7B8C",
+            icon: CalendarClock,
+          },
+        ];
+      }
+    }
+  };
+
+  const recommendations = getRecommendations();
+  const radialData = [
+    {
+      name: "confidence",
+      value: animProbability,
+      fill: prediction?.isPositive ? "#C0392B" : "#5B8C5A"
+    }
+  ];
+
   return (
     <div className="flex h-screen bg-[#FDF6F0] overflow-hidden">
       {/* Sidebar */}
@@ -147,374 +232,309 @@ export function PredictionResults() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="bg-white border-b border-[#E2D5C8] px-8 py-4">
-          <div className="flex items-center justify-end gap-4">
-            <button className="relative p-2 text-[#6B4F3A] hover:text-[#2C1A0E] hover:bg-[#F0E8DE] rounded-lg transition-colors">
-              <Bell className="w-5 h-5" />
-              <motion.span
-                animate={{ scale: [1, 1.4, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#C0392B] rounded-full"
-              />
-            </button>
-            <div className="flex items-center gap-3 pl-4 border-l border-[#E2D5C8]">
-              <div className="text-right">
-                <p className="text-sm font-medium text-[#2C1A0E]">Dr. Shreya J.</p>
-                <p className="text-xs text-[#6B4F3A]">Chief Oncologist</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C0392B] to-[#E8845A] flex items-center justify-center text-white font-semibold">
-                SJ
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-[#F0E8DE] text-[#6B4F3A] rounded text-xs font-semibold">
+                Clinical Analytics
+              </span>
+              <span className="text-xs text-[#6B4F3A]">
+                AI Inference Review &amp; Personalized Recommendations
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <button className="relative p-2 text-[#6B4F3A] hover:text-[#2C1A0E] hover:bg-[#F0E8DE] rounded-lg transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#C0392B] rounded-full" />
+              </button>
+              <div className="flex items-center gap-3 pl-4 border-l border-[#E2D5C8]">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-[#2C1A0E]">Dr. Shreya J.</p>
+                  <p className="text-xs text-[#6B4F3A]">Chief Oncologist</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C0392B] to-[#E8845A] flex items-center justify-center text-white font-semibold">
+                  SJ
+                </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Body */}
+        {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex items-start justify-between"
-            >
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-bold text-[#2C1A0E]">Prediction Results</h2>
-                  <motion.span
-                    animate={{ boxShadow: ["0 0 0 0 rgba(192,57,43,0.45)", "0 0 0 8px rgba(192,57,43,0)"] }}
-                    transition={{ duration: 1.6, repeat: Infinity }}
-                    className="px-3 py-1 bg-[#C0392B]/10 text-[#C0392B] border border-[#C0392B]/30 rounded text-xs font-semibold"
-                  >
-                    High Risk Alert
-                  </motion.span>
+            {/* If no prediction exists, render informative empty state */}
+            {!prediction ? (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl p-12 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)] text-center max-w-3xl mx-auto my-12"
+              >
+                <div className="w-20 h-20 bg-[#F0E8DE] rounded-full flex items-center justify-center mx-auto mb-6 text-[#E8845A]">
+                  <Activity className="w-10 h-10" />
                 </div>
-                <p className="text-sm text-[#6B4F3A]">
-                  Patient: John Doe • ID: PR-1042 • Scanned: Today, 10:45 AM
+                <h3 className="text-2xl font-bold text-[#2C1A0E] mb-3">No Active Prediction Loaded</h3>
+                <p className="text-sm text-[#6B4F3A] mb-8 max-w-md mx-auto leading-relaxed">
+                  To view clinical diagnostics, AI confidence distribution, and evidence-based recommendations, submit patient metrics or upload a tissue scan on the Predict Disease page.
                 </p>
-              </div>
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#E2D5C8] rounded-lg text-sm font-medium text-[#2C1A0E] hover:bg-[#F0E8DE] transition-colors"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </motion.button>
-                <Button variant="red" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Report
-                </Button>
-              </div>
-            </motion.div>
 
-            {/* Hero Risk Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="relative overflow-hidden bg-white rounded-2xl border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
-            >
-              <motion.div
-                animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-24 -right-16 w-72 h-72 bg-[#E8845A]/15 rounded-full blur-3xl"
-              />
-              <motion.div
-                animate={{ x: [0, -30, 0], y: [0, -10, 0] }}
-                transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-24 -left-10 w-72 h-72 bg-[#D4A96A]/20 rounded-full blur-3xl"
-              />
-
-              <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-6 p-8">
-                <div className="flex flex-col items-center justify-center">
-                  <div className="relative w-48 h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadialBarChart
-                        innerRadius="78%"
-                        outerRadius="100%"
-                        data={radialData}
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                        <RadialBar background={{ fill: "#F0E8DE" }} dataKey="value" cornerRadius={20} />
-                      </RadialBarChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <motion.span
-                        key={probability}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.6, type: "spring" }}
-                        className="text-5xl font-bold text-[#2C1A0E]"
-                      >
-                        {probability}
-                        <span className="text-2xl">%</span>
-                      </motion.span>
-                      <span className="text-xs text-[#6B4F3A] uppercase tracking-wider mt-1">Risk Probability</span>
-                    </div>
-                  </div>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                    className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C0392B]/10 border border-[#C0392B]/20"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-[#C0392B]" />
-                    <span className="text-xs font-semibold text-[#C0392B]">Heart Disease</span>
-                  </motion.div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Button variant="bark" onClick={() => navigate("/predict")}>
+                    Run Diabetes Prediction (Clinical Data)
+                  </Button>
+                  <Button variant="coral" onClick={() => navigate("/predict")}>
+                    Run Breast Cancer CNN Analysis (Image Scan)
+                  </Button>
                 </div>
 
-                <div className="lg:col-span-2 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Brain className="w-5 h-5 text-[#4A7B8C]" />
-                    <span className="text-sm font-semibold text-[#4A7B8C] uppercase tracking-wide">
-                      AI Diagnosis Summary
-                    </span>
-                  </div>
-                  <h3 className="text-2xl font-bold text-[#2C1A0E] mb-3">
-                    Significant cardiovascular risk detected
-                  </h3>
-                  <p className="text-sm text-[#6B4F3A] leading-relaxed mb-6">
-                    Based on 14 clinical metrics including blood pressure trends, cholesterol levels, and patient
-                    demographics, the model indicates a strong probability of developing cardiovascular complications
-                    within the next 5 years without intervention.
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: "Model Confidence", value: `${confidence.toFixed(1)}%`, color: "#4A7B8C" },
-                      { label: "Risk Tier", value: "High", color: "#C0392B" },
-                      { label: "Indicators", value: "6", color: "#D4A96A" },
-                    ].map((stat, i) => (
-                      <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + i * 0.1 }}
-                        className="rounded-xl p-3 bg-[#FDF6F0] border border-[#E2D5C8]"
-                      >
-                        <p className="text-xs text-[#6B4F3A] uppercase tracking-wide mb-1">{stat.label}</p>
-                        <p className="text-xl font-bold" style={{ color: stat.color }}>
-                          {stat.value}
-                        </p>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Timeline + Health Score */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="lg:col-span-2 bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-[#4A7B8C]" />
-                    <h3 className="font-semibold text-[#2C1A0E]">Blood Pressure Trend (6 mo)</h3>
-                  </div>
-                  <span className="text-xs text-[#6B4F3A]">Target ≤ 120 mmHg</span>
-                </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={bloodPressureData}>
-                    <defs>
-                      <linearGradient id="bpGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#C0392B" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#C0392B" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2D5C8" vertical={false} />
-                    <XAxis dataKey="month" stroke="#6B4F3A" fontSize={12} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#6B4F3A" fontSize={12} axisLine={false} tickLine={false} domain={[100, 170]} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "#FDF6F0",
-                        border: "1px solid #E2D5C8",
-                        borderRadius: 12,
-                        color: "#2C1A0E",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#C0392B"
-                      strokeWidth={2.5}
-                      fill="url(#bpGradient)"
-                      animationDuration={1200}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)] flex flex-col gap-4"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[#D4A96A]" />
-                  <h3 className="font-semibold text-[#2C1A0E]">Health Score</h3>
-                </div>
-
-                <div className="flex-1 flex flex-col items-center justify-center">
-                  <motion.div
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", delay: 0.5 }}
-                    className="relative"
-                  >
-                    <div className="text-6xl font-bold text-[#2C1A0E]">42</div>
-                    <span className="absolute -right-6 top-2 text-sm text-[#6B4F3A]">/100</span>
-                  </motion.div>
-                  <p className="text-sm text-[#C0392B] font-medium mt-2">Needs Attention</p>
-                </div>
-
-                <div className="space-y-2">
-                  {[
-                    { label: "Cardiovascular", value: 35, color: "#C0392B" },
-                    { label: "Metabolic", value: 72, color: "#5B8C5A" },
-                    { label: "Lifestyle", value: 58, color: "#D4A96A" },
-                  ].map((bar, i) => (
-                    <div key={bar.label}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[#6B4F3A]">{bar.label}</span>
-                        <span className="text-[#2C1A0E] font-semibold">{bar.value}</span>
-                      </div>
-                      <div className="h-1.5 bg-[#F0E8DE] rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${bar.value}%` }}
-                          transition={{ duration: 1, delay: 0.6 + i * 0.15, ease: "easeOut" }}
-                          className="h-full rounded-full"
-                          style={{ background: bar.color }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Indicators */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {[
-                { title: "Risky Indicators", items: riskyIndicators, accent: "#C0392B", soft: "#E07B54" },
-                { title: "Healthy Indicators", items: healthyIndicators, accent: "#5B8C5A", soft: "#5B8C5A" },
-              ].map((section, sIdx) => (
-                <motion.div
-                  key={section.title}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + sIdx * 0.1 }}
-                  className="bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
-                >
-                  <h4 className="font-semibold text-[#2C1A0E] mb-4 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: section.accent }} />
-                    {section.title}
+                {/* Model architecture summary */}
+                <div className="pt-8 border-t border-[#E2D5C8] text-left">
+                  <h4 className="text-sm font-semibold text-[#2C1A0E] mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#E8845A]" />
+                    <span>Configured Clinical Prediction Models</span>
                   </h4>
-                  <div className="space-y-4">
-                    <AnimatePresence>
-                      {section.items.map((indicator, idx) => {
-                        const Icon = indicator.icon;
-                        return (
-                          <motion.div
-                            key={indicator.name}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.4 + sIdx * 0.1 + idx * 0.08 }}
-                            whileHover={{ x: 4 }}
-                            className="flex items-start gap-3"
-                          >
-                            <div
-                              className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                              style={{ background: `${section.soft}1A` }}
-                            >
-                              <Icon className="w-4 h-4" style={{ color: section.soft }} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-baseline justify-between mb-1">
-                                <span className="text-sm font-semibold text-[#2C1A0E]">{indicator.name}</span>
-                                <span className="text-sm font-bold" style={{ color: section.accent }}>
-                                  {indicator.value}
-                                </span>
-                              </div>
-                              <p className="text-xs text-[#6B4F3A] mb-1.5">{indicator.subtitle}</p>
-                              <div className="h-1 bg-[#F0E8DE] rounded-full overflow-hidden">
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${indicator.level}%` }}
-                                  transition={{ duration: 0.9, delay: 0.6 + sIdx * 0.1 + idx * 0.08 }}
-                                  className="h-full rounded-full"
-                                  style={{ background: section.accent }}
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-[#FDF6F0] p-4 rounded-xl border border-[#E2D5C8]">
+                      <p className="text-xs font-semibold text-[#2C1A0E]">Breast Cancer (Invasive Ductal Carcinoma)</p>
+                      <p className="text-xs text-[#6B4F3A] mt-1">Architecture: Deep Convolutional Neural Network (PyTorch)</p>
+                      <p className="text-xs text-[#6B4F3A]">Input: 50×50 RGB H&amp;E Histopathology Patches</p>
+                      <p className="text-xs text-[#6B4F3A]">Status: {modelStatus?.breast_cancer_image_cnn.available ? "Model Active" : "Pending Dataset Setup"}</p>
+                    </div>
+                    <div className="bg-[#FDF6F0] p-4 rounded-xl border border-[#E2D5C8]">
+                      <p className="text-xs font-semibold text-[#2C1A0E]">Type 2 Diabetes Risk</p>
+                      <p className="text-xs text-[#6B4F3A] mt-1">Architecture: Random Forest Classifier</p>
+                      <p className="text-xs text-[#6B4F3A]">Input: 7 Clinical &amp; Laboratory Metrics</p>
+                      <p className="text-xs text-[#6B4F3A]">Status: {modelStatus?.diabetes_model.available ? "Model Active" : "Available"}</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <>
+                {/* Header */}
+                <motion.div
+                  initial={{ opacity: 0, y: -16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-start justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-3xl font-bold text-[#2C1A0E]">Prediction Results</h2>
+                      <span
+                        className={`px-3 py-1 rounded text-xs font-semibold border ${
+                          prediction.isPositive
+                            ? "bg-[#C0392B]/10 text-[#C0392B] border-[#C0392B]/30"
+                            : "bg-[#5B8C5A]/10 text-[#5B8C5A] border-[#5B8C5A]/30"
+                        }`}
+                      >
+                        {prediction.isPositive ? "High Risk Alert" : "Low Risk / Negative"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#6B4F3A]">
+                      Case ID: {prediction.id} • Modality: {prediction.disease === "breast-cancer" ? "Histopathology Image (CNN)" : "Clinical Laboratory Measurements"} • Evaluated: {prediction.timestamp}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button variant="outline" size="sm" onClick={() => navigate("/predict")}>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Run Another Prediction
+                    </Button>
+                    <button
+                      onClick={handleClear}
+                      className="px-3 py-2 border border-[#E2D5C8] rounded-lg text-xs text-[#C0392B] hover:bg-[#F0E8DE] transition-colors"
+                      title="Clear saved prediction"
+                    >
+                      Clear
+                    </button>
                   </div>
                 </motion.div>
-              ))}
-            </div>
 
-            {/* Recommendations */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
-            >
-              <div className="flex items-center gap-2 mb-6">
-                <Brain className="w-5 h-5 text-[#4A7B8C]" />
-                <h3 className="text-xl font-bold text-[#2C1A0E]">AI Personalized Recommendations</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {recommendations.map((rec, idx) => {
-                  const Icon = rec.icon;
-                  return (
-                    <motion.div
-                      key={rec.title}
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 + idx * 0.12 }}
-                      whileHover={{ y: -4, boxShadow: "0 12px 24px rgba(44,26,14,0.08)" }}
-                      className={`${rec.bgColor} rounded-xl p-5 border ${rec.borderColor} cursor-pointer`}
-                    >
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                        style={{ background: `${rec.accent}1A` }}
-                      >
-                        <Icon className="w-5 h-5" style={{ color: rec.accent }} />
+                {/* Hero Diagnosis Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="relative overflow-hidden bg-white rounded-2xl border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
+                >
+                  <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-6 p-8">
+                    {/* Radial Meter */}
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="relative w-48 h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadialBarChart
+                            innerRadius="78%"
+                            outerRadius="100%"
+                            data={radialData}
+                            startAngle={90}
+                            endAngle={-270}
+                          >
+                            <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                            <RadialBar background={{ fill: "#F0E8DE" }} dataKey="value" cornerRadius={20} />
+                          </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-5xl font-bold text-[#2C1A0E]">
+                            {prediction.confidence.toFixed(1)}
+                            <span className="text-2xl">%</span>
+                          </span>
+                          <span className="text-xs text-[#6B4F3A] uppercase tracking-wider mt-1">
+                            Model Confidence
+                          </span>
+                        </div>
                       </div>
-                      <h4 className="font-bold text-[#2C1A0E] mb-2">{rec.title}</h4>
-                      <p className="text-sm text-[#6B4F3A] mb-4 leading-relaxed">{rec.description}</p>
-                      <motion.button
-                        whileHover={{ x: 4 }}
-                        className="flex items-center gap-2 text-sm font-semibold hover:underline"
-                        style={{ color: rec.accent }}
+                      <div
+                        className={`mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
+                          prediction.isPositive
+                            ? "bg-[#C0392B]/10 border-[#C0392B]/20 text-[#C0392B]"
+                            : "bg-[#5B8C5A]/10 border-[#5B8C5A]/20 text-[#5B8C5A]"
+                        }`}
                       >
-                        Add to treatment plan
-                        <ArrowRight className="w-4 h-4" />
-                      </motion.button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </motion.div>
+                        {prediction.disease === "breast-cancer" ? (
+                          <Microscope className="w-3.5 h-3.5" />
+                        ) : (
+                          <Activity className="w-3.5 h-3.5" />
+                        )}
+                        <span className="text-xs font-semibold">
+                          {prediction.disease === "breast-cancer" ? "Breast Cancer (IDC)" : "Type 2 Diabetes"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* AI Diagnosis Summary */}
+                    <div className="lg:col-span-2 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Brain className="w-5 h-5 text-[#4A7B8C]" />
+                        <span className="text-xs font-semibold text-[#4A7B8C] uppercase tracking-wide">
+                          AI Model Inference Summary
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-[#2C1A0E] mb-3">
+                        {prediction.disease === "breast-cancer"
+                          ? prediction.isPositive
+                            ? "Invasive Ductal Carcinoma (IDC) cellular features detected"
+                            : "Invasive Ductal Carcinoma features not identified in scan"
+                          : prediction.isPositive
+                          ? "Elevated glycemic risk profile detected"
+                          : "Normal glycemic risk profile within expected parameters"}
+                      </h3>
+                      <p className="text-sm text-[#6B4F3A] leading-relaxed mb-6">
+                        {prediction.disease === "breast-cancer"
+                          ? `Inference performed by deep Convolutional Neural Network on tissue microscopy patch '${prediction.imageFileName ?? "specimen"}'. Predicted class is '${prediction.prediction}' with ${prediction.confidence.toFixed(1)}% model confidence.`
+                          : `Inference performed by clinical Random Forest model on patient physiological measurements. Predicted outcome is '${prediction.prediction}' with ${prediction.confidence.toFixed(1)}% model confidence.`}
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-xl p-3 bg-[#FDF6F0] border border-[#E2D5C8]">
+                          <p className="text-xs text-[#6B4F3A] uppercase tracking-wide mb-1">Model Architecture</p>
+                          <p className="text-sm font-bold text-[#2C1A0E] truncate">
+                            {prediction.modelType.includes("CNN") ? "PyTorch CNN" : "Random Forest"}
+                          </p>
+                        </div>
+                        <div className="rounded-xl p-3 bg-[#FDF6F0] border border-[#E2D5C8]">
+                          <p className="text-xs text-[#6B4F3A] uppercase tracking-wide mb-1">Risk Tier</p>
+                          <p className="text-sm font-bold" style={{ color: prediction.isPositive ? "#C0392B" : "#5B8C5A" }}>
+                            {prediction.isPositive ? "High Risk" : "Low Risk"}
+                          </p>
+                        </div>
+                        <div className="rounded-xl p-3 bg-[#FDF6F0] border border-[#E2D5C8]">
+                          <p className="text-xs text-[#6B4F3A] uppercase tracking-wide mb-1">Task Definition</p>
+                          <p className="text-sm font-bold text-[#D4A96A] truncate">
+                            {prediction.disease === "breast-cancer" ? "IDC Detection" : "Diabetes Risk"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Diagnostic Indicators Breakdown */}
+                <div className="bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]">
+                  <h4 className="font-semibold text-[#2C1A0E] mb-4 flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-[#E8845A]" />
+                    <span>Submitted Case Indicators</span>
+                  </h4>
+
+                  {prediction.disease === "diabetes" && prediction.inputs ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {Object.entries(prediction.inputs).map(([key, val]) => (
+                        <div key={key} className="bg-[#FDF6F0] p-3 rounded-xl border border-[#E2D5C8]">
+                          <p className="text-xs text-[#6B4F3A] mb-1">{key}</p>
+                          <p className="text-base font-bold text-[#2C1A0E]">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-[#FDF6F0] p-4 rounded-xl border border-[#E2D5C8]">
+                        <p className="text-xs text-[#6B4F3A] mb-1">Analyzed Specimen File</p>
+                        <p className="text-sm font-bold text-[#2C1A0E] truncate">{prediction.imageFileName ?? "Histopathology Patch"}</p>
+                      </div>
+                      <div className="bg-[#FDF6F0] p-4 rounded-xl border border-[#E2D5C8]">
+                        <p className="text-xs text-[#6B4F3A] mb-1">Patch Dimensions &amp; Modality</p>
+                        <p className="text-sm font-bold text-[#2C1A0E]">50×50 RGB (H&amp;E Stain)</p>
+                      </div>
+                      <div className="bg-[#FDF6F0] p-4 rounded-xl border border-[#E2D5C8]">
+                        <p className="text-xs text-[#6B4F3A] mb-1">Decision Threshold</p>
+                        <p className="text-sm font-bold text-[#2C1A0E]">0.50 Probability Cutoff</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Evidence-Based Recommendations */}
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-white rounded-2xl p-6 border border-[#E2D5C8] shadow-[0_1px_3px_rgba(44,26,14,0.07)]"
+                >
+                  <div className="flex items-center gap-2 mb-6">
+                    <Brain className="w-5 h-5 text-[#4A7B8C]" />
+                    <h3 className="text-xl font-bold text-[#2C1A0E]">Evidence-Based Clinical Recommendations</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {recommendations.map((rec, idx) => {
+                      const Icon = rec.icon;
+                      return (
+                        <div
+                          key={rec.title}
+                          className={`${rec.bgColor} rounded-xl p-5 border ${rec.borderColor} transition-all`}
+                        >
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                            style={{ background: `${rec.accent}1A` }}
+                          >
+                            <Icon className="w-5 h-5" style={{ color: rec.accent }} />
+                          </div>
+                          <h4 className="font-bold text-[#2C1A0E] mb-2">{rec.title}</h4>
+                          <p className="text-sm text-[#6B4F3A] mb-4 leading-relaxed">{rec.description}</p>
+                          <span
+                            className="flex items-center gap-2 text-xs font-semibold cursor-pointer hover:underline"
+                            style={{ color: rec.accent }}
+                          >
+                            Add to clinician review queue
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+
+                {/* Regulatory / Educational Disclaimer */}
+                <div className="p-4 bg-[#F0E8DE] border border-[#E2D5C8] rounded-xl flex items-start gap-3">
+                  <Info className="w-5 h-5 text-[#E8845A] flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-[#6B4F3A] leading-relaxed">
+                    <strong>Clinical Notice:</strong> This software is designed for investigational and educational workflows only. AI-generated predictions do not replace professional pathology consultations, clinical judgment, or standard laboratory diagnostic protocols.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
